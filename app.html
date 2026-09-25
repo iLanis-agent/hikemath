@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HikeMath - when will you actually be back</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:#0f1512; color:#ecf3ee; min-height:100vh; }
+  .wrap { max-width:860px; margin:0 auto; padding:28px 20px 80px; }
+  header { display:flex; justify-content:space-between; align-items:center; margin-bottom:22px; }
+  header h1 { font-size:22px; } header h1 span { color:#7dc98f; }
+  header a { color:#8fa295; text-decoration:none; font-size:14px; }
+  .card { background:#152019; border:1px solid #2c4535; border-radius:12px; padding:18px; margin-bottom:18px; }
+  label { font-size:12px; color:#8fa295; display:block; margin-bottom:4px; }
+  input, select { background:#0f1512; border:1px solid #38573f; border-radius:8px; color:#ecf3ee; padding:9px 10px; font-size:14px; width:100%; }
+  button { background:#7dc98f; border:none; color:#0d2113; font-weight:700; padding:11px 22px; border-radius:9px; font-size:14px; cursor:pointer; }
+  button.ghost { background:transparent; border:1px solid #38573f; color:#7dc98f; margin-left:8px; }
+  .row4 { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px; margin-bottom:12px; }
+  h3 { font-size:14px; color:#c2d1c6; margin-bottom:10px; }
+  .verdict { background:#122619; border:1px solid #2f5238; border-radius:10px; padding:14px 16px; margin-bottom:14px; font-size:15px; line-height:1.6; }
+  .verdict b { color:#7dc98f; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; }
+  .stat { background:#0f1512; border:1px solid #2c4535; border-radius:10px; padding:12px; }
+  .stat .v { font-size:20px; font-weight:700; color:#fff; }
+  .stat .k { font-size:11px; color:#8fa295; margin-top:2px; line-height:1.4; }
+  .err { color:#ff8a8a; font-size:13px; margin-top:8px; }
+  .note { color:#5e6e62; font-size:12px; margin-top:10px; }
+  @media (max-width:640px){ .row4 { grid-template-columns:1fr 1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><h1>Hike<span>Math</span></h1><a href="index.html">home</a></header>
+
+  <div class="card">
+    <h3>The trail</h3>
+    <div class="row4">
+      <div><label>Distance (km)</label><input id="dist" type="number" step="0.5" value="12"></div>
+      <div><label>Ascent (m)</label><input id="up" type="number" step="50" value="600"></div>
+      <div><label>Descent (m)</label><input id="down" type="number" step="50" value="600"></div>
+      <div><label>Breaks (min)</label><input id="brk" type="number" step="5" value="30"></div>
+    </div>
+    <h3>You</h3>
+    <div class="row4">
+      <div><label>Pace</label><select id="fit"><option value="0.7">fast (trail runner)</option><option value="0.85">fit regular</option><option value="1" selected>average</option><option value="1.2">taking it easy</option><option value="1.4">cautious / with kids</option></select></div>
+      <div><label>Pack weight (kg)</label><input id="pack" type="number" step="1" value="8"></div>
+      <div><label>Daylight left (hrs, optional)</label><input id="day" type="number" step="0.5" placeholder="e.g. 6"></div>
+      <div></div>
+    </div>
+    <button id="go">When am I back?</button><button class="ghost" id="p1">Local loop</button><button class="ghost" id="p2">Big summit day</button><button class="ghost" id="p3">Overnight pack</button>
+    <div class="err" id="err"></div>
+    <div class="note">Naismith's rule: an hour per 5 km plus half an hour per 300 m of climb, with a descent correction, the pack tax, and your breaks. It's the planning number, not a race prediction.</div>
+  </div>
+
+  <div id="out" style="display:none">
+    <div class="verdict" id="verdict"></div>
+    <div class="card">
+      <div class="stats" id="stats"></div>
+    </div>
+  </div>
+    <div class="card">
+      <h3>Why the map time lies</h3>
+      <div class="note" style="font-size:13px;line-height:1.8">
+        A flat 10 km is a 2-hour walk for an average hiker. Add 600 m of climbing and Naismith adds a full
+        hour - same distance, half again the day. Now give that hiker a 14 kg pack (+12% moving time) and
+        three snack stops, and the "two-hour loop" is a three-and-a-half-hour outing. None of this means
+        don't go; it means don't start at 4 PM in October. The descent correction is smaller because
+        downhill is faster until it's steep enough to be slow - knees are the second engine, and they
+        burn too. Rule of thumb: if the daylight margin comes back under an hour, the plan changes,
+        not the sunset.
+      </div>
+    </div>
+  </div>
+<script src="engine.js"></script>
+<script>
+(function(){
+  var F = ['dist','up','down','brk','fit','pack','day'];
+  var KEY = 'hikemath-settings';
+  function save(){ var o={}; F.forEach(function(f){o[f]=document.getElementById(f).value;}); try{localStorage.setItem(KEY,JSON.stringify(o));}catch(e){} }
+  function load(){ try{ var o=JSON.parse(localStorage.getItem(KEY)||'null'); if(o) F.forEach(function(f){ if(o[f]!==undefined) document.getElementById(f).value=o[f]; }); }catch(e){} }
+  function fmtH(h){ var hh = Math.floor(h), mm = Math.round((h - hh) * 60); if (mm === 60){ hh++; mm = 0; } return hh + 'h ' + (mm < 10 ? '0' : '') + mm + 'm'; }
+  function run(){
+    var errEl = document.getElementById('err'); errEl.textContent = '';
+    var o = {
+      distanceKm: document.getElementById('dist').value,
+      ascentM: document.getElementById('up').value,
+      descentM: document.getElementById('down').value,
+      breaksMin: document.getElementById('brk').value,
+      fitness: document.getElementById('fit').value,
+      packKg: document.getElementById('pack').value
+    };
+    var day = document.getElementById('day').value;
+    if (day !== '') o.daylightHrs = day;
+    var r;
+    try { r = HikeMathEngine.analyze(o); } catch(e){ errEl.textContent = e.message; return; }
+    save();
+    var v = document.getElementById('verdict');
+    var msg = 'Back in <b>' + fmtH(r.totalHrs) + '</b> - ' + fmtH(r.movingHrs) + ' moving plus breaks. ';
+    msg += 'That\'s a <b>' + r.grade + '</b> outing at ' + r.paceMinKm + ' min/km. ';
+    if (r.daylightOk === true) msg += 'Daylight holds with <b>' + fmtH(r.daylightMarginHrs) + ' to spare</b>.';
+    else if (r.daylightOk === false) msg += '<b>You run out of light</b> - short by ' + fmtH(-r.daylightMarginHrs) + '. Turn around by ' + fmtH(r.turnaroundHrs) + ' in, or start earlier.';
+    v.innerHTML = msg;
+    var s = document.getElementById('stats');
+    s.innerHTML = '';
+    var cells = [
+      [fmtH(r.totalHrs), 'total time out'],
+      [fmtH(r.movingHrs), 'moving time'],
+      [r.paceMinKm + ' min/km', 'effective pace'],
+      [r.grade, 'effort grade (' + r.effort + ' pts)'],
+      [r.packPenaltyPct + '%', 'pack tax on moving time'],
+      [r.daylightMarginHrs === null ? '-' : (r.daylightOk ? fmtH(r.daylightMarginHrs) + ' spare' : fmtH(-r.daylightMarginHrs) + ' short'), 'daylight margin']
+    ];
+    cells.forEach(function(c){
+      var d = document.createElement('div'); d.className = 'stat';
+      d.innerHTML = '<div class="v">' + c[0] + '</div><div class="k">' + c[1] + '</div>';
+      s.appendChild(d);
+    });
+    document.getElementById('out').style.display = 'block';
+  }
+  function preset(dist, up, down, brk, fit, pack){
+    document.getElementById('dist').value = dist;
+    document.getElementById('up').value = up;
+    document.getElementById('down').value = down;
+    document.getElementById('brk').value = brk;
+    document.getElementById('fit').value = fit;
+    document.getElementById('pack').value = pack;
+    run();
+  }
+  document.getElementById('p1').addEventListener('click', function(){ preset(8, 300, 300, 20, 1, 6); });
+  document.getElementById('p2').addEventListener('click', function(){ preset(22, 1400, 1400, 60, 0.85, 10); });
+  document.getElementById('p3').addEventListener('click', function(){ preset(25, 900, 600, 60, 1, 14); });
+  document.getElementById('go').addEventListener('click', run);
+  load();
+})();
+</script>
+</body>
+</html>
